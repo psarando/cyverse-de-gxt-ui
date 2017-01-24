@@ -1,5 +1,6 @@
 buildscript {
     repositories {
+        mavenLocal()
         mavenCentral()
         jcenter()
         maven {
@@ -8,14 +9,14 @@ buildscript {
     }
     dependencies {
         classpath("org.springframework.boot:spring-boot-gradle-plugin:1.2.3.RELEASE")
-        classpath 'de.richsource.gradle.plugins:gwt-gradle-plugin:0.6'
+        classpath 'de.richsource.gradle.plugins:gwt-gradle-plugin:0.7-SNAPSHOT'
     }
 }
 
 apply plugin: 'java'
 apply plugin: 'idea'
-sourceCompatibility = 1.7
-targetCompatibility = 1.7
+sourceCompatibility = 1.8
+targetCompatibility = 1.8
 
 // Establish extended properties for all projects
 apply from: 'versions.gradle'
@@ -26,8 +27,8 @@ subprojects {
     apply plugin: 'java'
     apply plugin: 'eclipse'
     apply plugin: 'idea'
-    sourceCompatibility = 1.7
-    targetCompatibility = 1.7
+    sourceCompatibility = 1.8
+    targetCompatibility = 1.8
 
     repositories {
         mavenCentral()
@@ -74,4 +75,3 @@ clean {
 task wrapper(type: Wrapper) {
     gradleVersion = '2.3'
 }
-
