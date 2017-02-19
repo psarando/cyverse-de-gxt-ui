@@ -19,12 +19,13 @@ import org.iplantc.de.client.models.apps.AppCategory;
 import org.iplantc.de.client.models.apps.AppDoc;
 import org.iplantc.de.client.models.ontologies.OntologyHierarchy;
 import org.iplantc.de.client.models.tool.Tool;
-import org.iplantc.de.commons.client.views.dialogs.IPlantPromptDialog;
 import org.iplantc.de.desktop.client.presenter.DesktopPresenterImpl;
 
 import com.google.common.base.Strings;
 import com.google.gwt.cell.client.SafeHtmlCell;
 import com.google.gwt.core.client.GWT;
+import com.google.gwt.core.client.JavaScriptObject;
+import com.google.gwt.core.client.Scheduler;
 import com.google.gwt.dom.client.DivElement;
 import com.google.gwt.editor.client.LeafValueEditor;
 import com.google.gwt.editor.client.SimpleBeanEditorDriver;
@@ -48,11 +49,15 @@ import com.google.gwt.user.client.ui.InlineLabel;
 import com.google.gwt.user.client.ui.NumberLabel;
 import com.google.inject.Inject;
 import com.google.inject.assistedinject.Assisted;
+import com.google.web.bindery.autobean.shared.AutoBeanCodex;
+import com.google.web.bindery.autobean.shared.AutoBeanUtils;
+import com.google.web.bindery.autobean.shared.Splittable;
 
 import com.sencha.gxt.core.client.Style;
 import com.sencha.gxt.core.client.ValueProvider;
 import com.sencha.gxt.data.shared.TreeStore;
 import com.sencha.gxt.widget.core.client.Composite;
+import com.sencha.gxt.widget.core.client.Dialog;
 import com.sencha.gxt.widget.core.client.Dialog.PredefinedButton;
 import com.sencha.gxt.widget.core.client.TabPanel;
 import com.sencha.gxt.widget.core.client.container.AccordionLayoutContainer;
@@ -152,6 +157,9 @@ public class AppDetailsViewImpl extends Composite implements
     @UiField (provided = true)
     @Ignore
     Tree<OntologyHierarchy, SafeHtml> hierarchyTree;
+    @UiField
+    @Ignore
+    HTMLPanel hierarchyWidget;
     @UiField(provided = true) @Ignore TreeStore<OntologyHierarchy> hierarchyTreeStore;
     @UiField(provided = true) @Ignore Tree<AppCategory, String> categoryTree;
     @UiField(provided = true) @Ignore TreeStore<AppCategory> categoryTreeStore;
@@ -230,24 +238,86 @@ public class AppDetailsViewImpl extends Composite implements
             url.addClickHandler(new ClickHandler() {
                 @Override
                 public void onClick(ClickEvent event) {
-                    IPlantPromptDialog ipd = new IPlantPromptDialog(appearance.appUrl(),
-                                                                    1024,
-                                                                    GWT.getHostPageBaseURL()
-                                                                            + "?type="
-                                                                            + DesktopPresenterImpl.TypeQueryValues.APPS
-                                                                            + "&app-id=" + app.getId()
-                                                                            + "&"
-                                                                            + DesktopPresenterImpl.QueryStrings.SYSTEM_ID
-                                                                            + "=" + app.getSystemId(),
-                                                                    null);
+                    Dialog ipd = new Dialog();
+                    ipd.setModal(true);
+                    ipd.setHideOnButtonClick(true);
                     ipd.setHeadingHtml(appearance.copyAppUrl());
                     ipd.setWidth("500px");
                     ipd.setPredefinedButtons(PredefinedButton.OK);
                     ipd.show();
+                    renderCopyTextArea(ipd.getBody().getId(true),
+                                       appearance.copyAppUrl(),
+                                       GWT.getHostPageBaseURL()
+                                                    + "?type="
+                                                    + DesktopPresenterImpl.TypeQueryValues.APPS
+                                                    + "&app-id=" + app.getId()
+                                                    + "&"
+                                                    + DesktopPresenterImpl.QueryStrings.SYSTEM_ID
+                                                    + "=" + app.getSystemId());
                 }
             });
         } else {
             helpLink.setVisible(false);
+        }
+
+        Scheduler.get().scheduleFinally(new Scheduler.ScheduledCommand() {
+
+            @Override
+            public void execute() {
+                final JavaScriptObject presenterShim = getPresenterShim(AppDetailsViewImpl.this);
+                final JavaScriptObject appearanceShim = getAppDetailsAppearanceShim(appearance);
+                final Splittable appJson = AutoBeanCodex.encode(AutoBeanUtils.getAutoBean(app));
+
+                renderToolDetails(toolsContainer.getId(), appearanceShim, appJson);
+                renderCategoryTree(hierarchyWidget.getElement().getId(), appJson, presenterShim, appearanceShim);
+            }
+        });
+    }
+
+    public static native void renderCopyTextArea(String elementID, String btnText, String textToCopy) /*-{
+        $wnd.CyVerseReactComponents.renderCopyTextArea(elementID, btnText, textToCopy);
+    }-*/;
+
+    public static native void renderToolDetails(String elementID, JavaScriptObject appearance, Splittable app) /*-{
+        $wnd.CyVerseReactComponents.renderToolDetails(elementID, appearance, app);
+    }-*/;
+
+    public static native void renderCategoryTree(String elementID, Splittable app, JavaScriptObject presenter, JavaScriptObject appearance) /*-{
+        $wnd.CyVerseReactComponents.renderCategoryTree(elementID, app, presenter, appearance);
+    }-*/;
+
+    public static native JavaScriptObject getAppDetailsAppearanceShim(AppDetailsView.AppDetailsAppearance appearance) /*-{
+        var css = appearance.@org.iplantc.de.apps.client.AppDetailsView.AppDetailsAppearance::css()();
+
+        return {
+            css: function() {
+                return {
+                    label: css.@org.iplantc.de.apps.client.AppDetailsView.AppDetailsAppearance.AppDetailsStyle::label(),
+                    value: css.@org.iplantc.de.apps.client.AppDetailsView.AppDetailsAppearance.AppDetailsStyle::value()
+                };
+            },
+            detailsLabel:         function() { return appearance.@org.iplantc.de.apps.client.AppDetailsView.AppDetailsAppearance::detailsLabel()(); },
+            toolNameLabel:        function() { return appearance.@org.iplantc.de.apps.client.AppDetailsView.AppDetailsAppearance::toolNameLabel()(); },
+            descriptionLabel:     function() { return appearance.@org.iplantc.de.apps.client.AppDetailsView.AppDetailsAppearance::descriptionLabel()(); },
+            toolPathLabel:        function() { return appearance.@org.iplantc.de.apps.client.AppDetailsView.AppDetailsAppearance::toolPathLabel()(); },
+            toolVersionLabel:     function() { return appearance.@org.iplantc.de.apps.client.AppDetailsView.AppDetailsAppearance::toolVersionLabel()(); },
+            toolAttributionLabel: function() { return appearance.@org.iplantc.de.apps.client.AppDetailsView.AppDetailsAppearance::toolAttributionLabel()(); }
+        };
+    }-*/;
+
+    public static native JavaScriptObject getPresenterShim(AppDetailsView presenter) /*-{
+        return {
+            onDetailsCategoryClicked: function(selection) {
+                presenter.@org.iplantc.de.apps.client.AppDetailsView::onDetailsCategoryClicked(Ljava/lang/String;)(selection);
+            }
+        };
+    }-*/;
+
+    @Override
+    public void onDetailsCategoryClicked(String modelKey) {
+        OntologyHierarchy hierarchy = hierarchyTreeStore.findModelWithKey(modelKey);
+        if (hierarchy != null) {
+            fireEvent(new DetailsHierarchyClicked(hierarchy));
         }
     }
 
@@ -258,6 +328,7 @@ public class AppDetailsViewImpl extends Composite implements
         favIcon.setBaseDebugId(baseID);
         toolsContainer.ensureDebugId(baseID + AppsModule.Ids.APP_TOOLS);
         toolEditorSource.setBaseDebugId(baseID);
+        hierarchyWidget.ensureDebugId(baseID + AppsModule.Ids.CATEGORIES_TREE);
     }
 
     @Override
