@@ -2,8 +2,11 @@
  * @author psarando
  */
 import React, { Component } from 'react';
-import SelectField from 'material-ui/SelectField';
-import MenuItem from 'material-ui/MenuItem';
+import {
+    MediaCard,
+    MediaCardGroup,
+    SummaryText,
+} from "cyverse-ui";
 
 class ToolDetails extends Component {
     constructor(props) {
@@ -26,21 +29,18 @@ class ToolDetails extends Component {
     render() {
         let tools      = this.props.app.tools,
             appearance = this.props.appearance,
-            toolInfo   = tools[this.state.selectedToolIndex],
             labelClass = appearance.css().label(),
             valueClass = appearance.css().value();
 
         return (
-            <div>
-                <SelectField value={this.state.selectedToolIndex}
-                             onChange={this.onToolSelectionChange} >
-                    {
-                        tools.map( (toolInfo, index) => (
-                                <MenuItem key={index} value={index} primaryText={toolInfo.name} />
-                            )
-                        )
-                    }
-                </SelectField>
+            <MediaCardGroup>
+                {
+                    tools.map( (toolInfo, index) => (
+                <MediaCard
+                    title={toolInfo.name}
+                    summary={ <SummaryText children={toolInfo.description} /> }
+
+                    detail = {
                 <table>
                     <tbody>
                     <tr>
@@ -93,7 +93,12 @@ class ToolDetails extends Component {
                     </tr>
                     </tbody>
                 </table>
-            </div>
+                    }
+                />
+                        )
+                    )
+                }
+            </MediaCardGroup>
         );
     }
 }
